@@ -124,7 +124,8 @@ type Peer struct {
 	testPipe       *MsgPipeRW // for testing
 	testRemoteAddr string     // for testing
 
-	latency atomic.Int64 // mill second latency, estimated by ping msg
+	latency                       atomic.Int64  // mill second latency, estimated by ping msg
+	firstDiscoveredPendingTxCount atomic.Uint64 // count of first-discovered pending transactions from this peer
 
 	// it indicates the peer is in the validator network, it will directly broadcast when miner/sentry broadcast mined block,
 	// and won't broadcast any txs between EVN peers.
@@ -284,6 +285,16 @@ func (p *Peer) DynDialed() bool {
 // it is configured as static.
 func (p *Peer) StaticDialed() bool {
 	return p.rw.is(staticDialedConn)
+}
+
+// IncrementFirstDiscoveredPendingTxCount increments the count of first-discovered pending transactions from this peer.
+func (p *Peer) IncrementFirstDiscoveredPendingTxCount() {
+	p.firstDiscoveredPendingTxCount.Add(1)
+}
+
+// FirstDiscoveredPendingTxCount returns the count of first-discovered pending transactions from this peer.
+func (p *Peer) FirstDiscoveredPendingTxCount() uint64 {
+	return p.firstDiscoveredPendingTxCount.Load()
 }
 
 // Lifetime returns the time since peer creation.
@@ -620,9 +631,10 @@ type PeerInfo struct {
 		Trusted       bool   `json:"trusted"`
 		Static        bool   `json:"static"`
 	} `json:"network"`
-	Protocols   map[string]interface{} `json:"protocols"` // Sub-protocol specific metadata fields
-	Latency     int64                  `json:"latency"`   // the estimate latency from ping msg
-	EVNPeerFlag bool                   `json:"evnPeerFlag"`
+	Protocols                     map[string]interface{} `json:"protocols"`                     // Sub-protocol specific metadata fields
+	Latency                       int64                  `json:"latency"`                       // the estimate latency from ping msg
+	EVNPeerFlag                   bool                   `json:"evnPeerFlag"`                   // it indicates the peer is in the validator network
+	FirstDiscoveredPendingTxCount uint64                 `json:"firstDiscoveredPendingTxCount"` // count of first-discovered pending transactions from this peer
 }
 
 // Info gathers and returns a collection of metadata known about a peer.
@@ -634,13 +646,14 @@ func (p *Peer) Info() *PeerInfo {
 	}
 	// Assemble the generic peer metadata
 	info := &PeerInfo{
-		Enode:       p.Node().URLv4(),
-		ID:          p.ID().String(),
-		Name:        p.Fullname(),
-		Caps:        caps,
-		Protocols:   make(map[string]interface{}, len(p.running)),
-		Latency:     p.latency.Load(),
-		EVNPeerFlag: p.EVNPeerFlag.Load(),
+		Enode:                         p.Node().URLv4(),
+		ID:                            p.ID().String(),
+		Name:                          p.Fullname(),
+		Caps:                          caps,
+		Protocols:                     make(map[string]interface{}, len(p.running)),
+		Latency:                       p.latency.Load(),
+		EVNPeerFlag:                   p.EVNPeerFlag.Load(),
+		FirstDiscoveredPendingTxCount: p.firstDiscoveredPendingTxCount.Load(),
 	}
 	if p.Node().Seq() > 0 {
 		info.ENR = p.Node().String()

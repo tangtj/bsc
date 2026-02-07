@@ -397,7 +397,13 @@ func newHandler(config *handlerConfig) (*handler, error) {
 		}
 		return errors
 	}
-	h.txFetcher = fetcher.NewTxFetcher(h.txpool.Has, addTxs, fetchTx, h.removePeer)
+	incFirstDiscoveredPendingTxCount := func(peer string) {
+		p := h.peers.peer(peer)
+		if p != nil && p.Peer != nil {
+			p.Peer.IncrementFirstDiscoveredPendingTxCount()
+		}
+	}
+	h.txFetcher = fetcher.NewTxFetcher(h.txpool.Has, addTxs, fetchTx, h.removePeer, incFirstDiscoveredPendingTxCount)
 	h.chainSync = newChainSyncer(h)
 	return h, nil
 }
