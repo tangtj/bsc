@@ -172,6 +172,7 @@ func (h *ethHandler) handleBlockBroadcast(peer *eth.Peer, packet *eth.NewBlockPa
 		if addr != nil {
 			stats.RecvNewBlockFrom.Store(addr.String())
 		}
+		peer.Peer.IncrementFirstDiscoveredBlockCount()
 	}
 
 	// Assuming the block is importable by the peer, but possibly not yet done so,

@@ -126,6 +126,7 @@ type Peer struct {
 
 	latency                       atomic.Int64  // mill second latency, estimated by ping msg
 	firstDiscoveredPendingTxCount atomic.Uint64 // count of first-discovered pending transactions from this peer
+	firstDiscoveredBlockCount     atomic.Uint64 // count of first-discovered new blocks from this peer
 
 	// it indicates the peer is in the validator network, it will directly broadcast when miner/sentry broadcast mined block,
 	// and won't broadcast any txs between EVN peers.
@@ -295,6 +296,16 @@ func (p *Peer) IncrementFirstDiscoveredPendingTxCount() {
 // FirstDiscoveredPendingTxCount returns the count of first-discovered pending transactions from this peer.
 func (p *Peer) FirstDiscoveredPendingTxCount() uint64 {
 	return p.firstDiscoveredPendingTxCount.Load()
+}
+
+// IncrementFirstDiscoveredBlockCount increments the count of first-discovered new blocks from this peer.
+func (p *Peer) IncrementFirstDiscoveredBlockCount() {
+	p.firstDiscoveredBlockCount.Add(1)
+}
+
+// FirstDiscoveredBlockCount returns the count of first-discovered new blocks from this peer.
+func (p *Peer) FirstDiscoveredBlockCount() uint64 {
+	return p.firstDiscoveredBlockCount.Load()
 }
 
 // Lifetime returns the time since peer creation.
@@ -635,6 +646,7 @@ type PeerInfo struct {
 	Latency                       int64                  `json:"latency"`                       // the estimate latency from ping msg
 	EVNPeerFlag                   bool                   `json:"evnPeerFlag"`                   // it indicates the peer is in the validator network
 	FirstDiscoveredPendingTxCount uint64                 `json:"firstDiscoveredPendingTxCount"` // count of first-discovered pending transactions from this peer
+	FirstDiscoveredBlockCount     uint64                 `json:"firstDiscoveredBlockCount"`     // count of first-discovered new blocks from this peer
 }
 
 // Info gathers and returns a collection of metadata known about a peer.
@@ -654,6 +666,7 @@ func (p *Peer) Info() *PeerInfo {
 		Latency:                       p.latency.Load(),
 		EVNPeerFlag:                   p.EVNPeerFlag.Load(),
 		FirstDiscoveredPendingTxCount: p.firstDiscoveredPendingTxCount.Load(),
+		FirstDiscoveredBlockCount:     p.firstDiscoveredBlockCount.Load(),
 	}
 	if p.Node().Seq() > 0 {
 		info.ENR = p.Node().String()
