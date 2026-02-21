@@ -18,6 +18,8 @@ package eth
 
 import (
 	"net"
+	"sync/atomic"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/eth/protocols/bsc"
@@ -43,6 +45,10 @@ type ethPeer struct {
 	*eth.Peer
 	snapExt *snapPeer // Satellite `snap` connection
 	bscExt  *bscPeer  // Satellite `bsc` connection
+
+	// lastSyncTime is the last time we received block or pending tx from this peer.
+	// Used to disconnect peers that never sync (no NewBlockHashes/NewPooledTransactionHashes).
+	lastSyncTime atomic.Int64
 }
 
 // info gathers and returns some `eth` protocol metadata known about a peer.
@@ -63,6 +69,25 @@ func (p *ethPeer) remoteAddr() net.Addr {
 		return p.Peer.Peer.RemoteAddr()
 	}
 	return nil
+}
+
+// UpdateLastSyncTime records that we received block or pending tx from this peer.
+func (p *ethPeer) UpdateLastSyncTime() {
+	p.lastSyncTime.Store(time.Now().UnixNano())
+}
+
+// LastSyncTime returns when we last received block or pending tx from this peer.
+func (p *ethPeer) LastSyncTime() time.Time {
+	ns := p.lastSyncTime.Load()
+	if ns == 0 {
+		return time.Time{}
+	}
+	return time.Unix(0, ns)
+}
+
+// Trusted returns true if the peer is configured as trusted (skip inactive check).
+func (p *ethPeer) Trusted() bool {
+	return p.Peer != nil && p.Peer.Peer != nil && p.Peer.Peer.Trusted()
 }
 
 // snapPeerInfo represents a short summary of the `snap` sub-protocol metadata known

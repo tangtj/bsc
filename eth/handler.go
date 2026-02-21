@@ -69,6 +69,10 @@ const (
 	// All transactions with a higher size will be announced and need to be fetched
 	// by the peer.
 	txMaxBroadcastSize = 4096
+
+	// inactivePeerThreshold is the max time without receiving block or pending tx
+	// from a peer before disconnecting. Peers that never sync are dropped.
+	inactivePeerThreshold = 5 * time.Minute
 )
 
 var (
@@ -432,6 +436,7 @@ func (h *handler) protoTracker() {
 				// here check & enable peer broadcast features periodically, and it's a simple way to handle the peer change and the list change scenarios.
 				h.peers.enableEVNFeatures(h.queryValidatorNodeIDsMap(), h.evnNodeIdsWhitelistMap)
 			}
+			h.peers.checkAndDropInactivePeers(inactivePeerThreshold, h.removePeer)
 		case <-h.quitSync:
 			// Wait for all active handlers to finish.
 			for ; active > 0; active-- {

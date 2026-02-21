@@ -63,15 +63,27 @@ func (h *ethHandler) Handle(peer *eth.Peer, packet eth.Packet) error {
 	switch packet := packet.(type) {
 	case *eth.NewBlockHashesPacket:
 		hashes, numbers := packet.Unpack()
+		if p := h.peers.peer(peer.ID()); p != nil {
+			p.UpdateLastSyncTime()
+		}
 		return h.handleBlockAnnounces(peer, hashes, numbers)
 
 	case *eth.NewBlockPacket:
+		if p := h.peers.peer(peer.ID()); p != nil {
+			p.UpdateLastSyncTime()
+		}
 		return h.handleBlockBroadcast(peer, packet)
 
 	case *eth.NewPooledTransactionHashesPacket:
+		if p := h.peers.peer(peer.ID()); p != nil {
+			p.UpdateLastSyncTime()
+		}
 		return h.txFetcher.Notify(peer.ID(), packet.Types, packet.Sizes, packet.Hashes)
 
 	case *eth.TransactionsPacket:
+		if p := h.peers.peer(peer.ID()); p != nil {
+			p.UpdateLastSyncTime()
+		}
 		for _, tx := range *packet {
 			if tx.Type() == types.BlobTxType {
 				return errors.New("disallowed broadcast blob transaction")
@@ -80,6 +92,9 @@ func (h *ethHandler) Handle(peer *eth.Peer, packet eth.Packet) error {
 		return h.txFetcher.Enqueue(peer.ID(), *packet, false)
 
 	case *eth.PooledTransactionsResponse:
+		if p := h.peers.peer(peer.ID()); p != nil {
+			p.UpdateLastSyncTime()
+		}
 		// If we receive any blob transactions missing sidecars, or with
 		// sidecars that don't correspond to the versioned hashes reported
 		// in the header, disconnect from the sending peer.

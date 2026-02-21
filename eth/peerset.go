@@ -292,6 +292,7 @@ func (ps *peerSet) registerPeer(peer *eth.Peer, ext *snap.Peer, bscExt *bsc.Peer
 	eth := &ethPeer{
 		Peer: peer,
 	}
+	eth.UpdateLastSyncTime() // grace period: peer has 5 min from connection to send first block/tx
 	if ext != nil {
 		eth.snapExt = &snapPeer{ext}
 		ps.snapPeers++
@@ -301,6 +302,37 @@ func (ps *peerSet) registerPeer(peer *eth.Peer, ext *snap.Peer, bscExt *bsc.Peer
 	}
 	ps.peers[id] = eth
 	return nil
+}
+
+// checkAndDropInactivePeers disconnects peers that haven't sent block or pending tx
+// within the given threshold. Skips trusted peers. Calls removePeer for each dropped peer.
+func (ps *peerSet) checkAndDropInactivePeers(threshold time.Duration, removePeer func(string)) {
+	ps.lock.RLock()
+	peers := make([]*ethPeer, 0, len(ps.peers))
+	for _, p := range ps.peers {
+		peers = append(peers, p)
+	}
+	ps.lock.RUnlock()
+
+	now := time.Now()
+	for _, p := range peers {
+		if p.Trusted() {
+			continue
+		}
+		lastSync := p.LastSyncTime()
+		if lastSync.IsZero() {
+			continue
+		}
+		if now.Sub(lastSync) > threshold {
+			removePeer(p.ID())
+			addr := p.remoteAddr()
+			if addr != nil {
+				log.Info("[peerSet](checkAndDropInactivePeers) disconnect inactive peer, no block/tx sync in 5min", "peer", p.ID(), "remoteAddr", addr.String())
+			} else {
+				log.Info("[peerSet](checkAndDropInactivePeers) disconnect inactive peer, no block/tx sync in 5min", "peer", p.ID())
+			}
+		}
+	}
 }
 
 // unregisterPeer removes a remote peer from the active set, disabling any further
