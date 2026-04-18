@@ -17,6 +17,7 @@
 package core
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -59,8 +60,12 @@ func (st *insertStats) report(chain []*types.Block, index int, snapDiffItems, sn
 		end := chain[index]
 
 		// Assemble the log context and send it to the logger
+		blockTime := int64(chain[0].Header().MilliTimestamp())
+		receiveInterval := chain[0].ReceivedAt.UnixMilli() - blockTime
+		totalInterval := time.Now().UnixMilli() - int64(chain[0].Header().MilliTimestamp())
+
 		context := []interface{}{
-			"number", end.Number(), "hash", end.Hash(), "miner", end.Coinbase(),
+			"number", end.Number(), "hash", end.Hash(), "miner", end.Coinbase(), "blocktimes", fmt.Sprintf("%d-%d-%d", receiveInterval, elapsed.Milliseconds(), totalInterval),
 			"blocks", st.processed, "txs", txs, "blobs", blobs, "mgas", float64(st.usedGas) / 1000000,
 			"elapsed", common.PrettyDuration(elapsed), "mgasps", mgasps, "BAL", end.BAL() != nil,
 		}
