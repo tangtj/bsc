@@ -700,6 +700,8 @@ func (b *Block) WithSeal(header *Header) *Block {
 		uncles:       b.uncles,
 		withdrawals:  b.withdrawals,
 		witness:      b.witness,
+		ReceivedAt:   b.ReceivedAt,
+		ReceivedFrom: b.ReceivedFrom,
 		sidecars:     b.sidecars,
 		bal:          b.bal,
 	}
@@ -714,6 +716,8 @@ func (b *Block) WithBody(body Body) *Block {
 		uncles:       make([]*Header, len(body.Uncles)),
 		withdrawals:  slices.Clone(body.Withdrawals),
 		witness:      b.witness,
+		ReceivedAt:   b.ReceivedAt,
+		ReceivedFrom: b.ReceivedFrom,
 		sidecars:     b.sidecars,
 		bal:          b.bal,
 	}
@@ -730,6 +734,8 @@ func (b *Block) WithWithdrawals(withdrawals []*Withdrawal) *Block {
 		transactions: b.transactions,
 		uncles:       b.uncles,
 		witness:      b.witness,
+		ReceivedAt:   b.ReceivedAt,
+		ReceivedFrom: b.ReceivedFrom,
 		sidecars:     b.sidecars,
 		bal:          b.bal,
 	}
@@ -748,6 +754,8 @@ func (b *Block) WithSidecars(sidecars BlobSidecars) *Block {
 		uncles:       b.uncles,
 		withdrawals:  b.withdrawals,
 		witness:      b.witness,
+		ReceivedAt:   b.ReceivedAt,
+		ReceivedFrom: b.ReceivedFrom,
 		bal:          b.bal,
 	}
 	if sidecars != nil {
@@ -764,6 +772,8 @@ func (b *Block) WithBAL(bal *BlockAccessListEncode) *Block {
 		uncles:       b.uncles,
 		withdrawals:  b.withdrawals,
 		witness:      b.witness,
+		ReceivedAt:   b.ReceivedAt,
+		ReceivedFrom: b.ReceivedFrom,
 		sidecars:     b.sidecars,
 	}
 	block.bal = bal
@@ -781,6 +791,8 @@ func (b *Block) WithWitness(witness *ExecutionWitness) *Block {
 		uncles:       b.uncles,
 		withdrawals:  b.withdrawals,
 		witness:      witness,
+		ReceivedAt:   b.ReceivedAt,
+		ReceivedFrom: b.ReceivedFrom,
 		sidecars:     b.sidecars,
 	}
 }
