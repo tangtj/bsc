@@ -266,6 +266,21 @@ func TestNewPeer(t *testing.T) {
 	p.Disconnect(DiscAlreadyConnected) // Should not hang
 }
 
+func TestPeerInfoDuration(t *testing.T) {
+	p := NewPeer(randomID(), "nodename", nil)
+
+	time.Sleep(20 * time.Millisecond)
+
+	info := p.Info()
+	duration, err := time.ParseDuration(info.Duration)
+	if err != nil {
+		t.Fatalf("failed to parse duration %q: %v", info.Duration, err)
+	}
+	if duration < 20*time.Millisecond {
+		t.Fatalf("duration too small: got %v", duration)
+	}
+}
+
 func TestMatchProtocols(t *testing.T) {
 	tests := []struct {
 		Remote []Cap

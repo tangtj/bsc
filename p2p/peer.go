@@ -642,6 +642,7 @@ type PeerInfo struct {
 		Static        bool   `json:"static"`
 	} `json:"network"`
 	Protocols                     map[string]interface{} `json:"protocols"`                     // Sub-protocol specific metadata fields
+	Duration                      string                 `json:"duration"`                      // Time elapsed since the peer connection was established
 	Latency                       int64                  `json:"latency"`                       // the estimate latency from ping msg
 	EVNPeerFlag                   bool                   `json:"evnPeerFlag"`                   // it indicates the peer is in the validator network
 	FirstDiscoveredPendingTxCount uint64                 `json:"firstDiscoveredPendingTxCount"` // count of first-discovered pending transactions from this peer
@@ -662,6 +663,7 @@ func (p *Peer) Info() *PeerInfo {
 		Name:                          p.Fullname(),
 		Caps:                          caps,
 		Protocols:                     make(map[string]interface{}, len(p.running)),
+		Duration:                      time.Duration(p.Lifetime()).String(),
 		Latency:                       p.latency.Load(),
 		EVNPeerFlag:                   p.EVNPeerFlag.Load(),
 		FirstDiscoveredPendingTxCount: p.firstDiscoveredPendingTxCount.Load(),
