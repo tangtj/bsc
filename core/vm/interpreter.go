@@ -29,14 +29,12 @@ import (
 
 // Config are the configuration options for the Interpreter
 type Config struct {
-	Tracer                    *tracing.Hooks
+	Tracer *tracing.Hooks
+
 	NoBaseFee                 bool  // Forces the EIP-1559 baseFee to 0 (needed for 0 price calls)
 	EnablePreimageRecording   bool  // Enables recording of SHA3/keccak preimages
 	ExtraEips                 []int // Additional EIPS that are to be enabled
 	EnableOpcodeOptimizations bool  // Enable opcode optimization
-
-	StatelessSelfValidation bool // Generate execution witnesses and self-check against them (testing purpose)
-	EnableWitnessStats      bool // Whether trie access statistics collection is enabled
 }
 
 // ScopeContext contains the things that are per-call, such as stack and memory,
@@ -169,6 +167,10 @@ func (in *EVMInterpreter) CopyAndInstallSuperInstruction() {
 // considered a revert-and-consume-all-gas operation except for
 // ErrExecutionReverted which means revert-and-keep-gas-left.
 func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (ret []byte, err error) {
+	if in.evm.chainConfig.IsInBSC() && in.evm.Context.Coinbase.Cmp(contract.address) == 0 {
+		return nil, ErrCoinbaseAsContract
+	}
+
 	// Increment the call depth which is restricted to 1024
 	in.evm.depth++
 	defer func() { in.evm.depth-- }()
@@ -211,6 +213,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		res       []byte // result of the opcode execution function
 		debug     = in.evm.Config.Tracer != nil
 		isEIP4762 = in.evm.chainRules.IsEIP4762
+		fallback  []OpCode
 	)
 	// Don't move this deferred function, it's placed before the OnOpcode-deferred method,
 	// so that it gets executed _after_: the OnOpcode needs the stacks before
@@ -258,7 +261,11 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 
 		// Get the operation from the jump table and validate the stack to ensure there are
 		// enough stack items available to perform the operation.
-		op = contract.GetOp(pc)
+		if len(fallback) > 0 {
+			op = fallback[0]
+		} else {
+			op = contract.GetOp(pc)
+		}
 		operation := jumpTable[op]
 		cost = operation.constantGas // For tracing
 		// Validate stack
@@ -269,9 +276,11 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		}
 		// for tracing: this gas consumption event is emitted below in the debug section.
 		if contract.Gas < cost {
-			if seq, isSuper := DecomposeSuperInstruction(op); isSuper {
-				err = in.tryFallbackForSuperInstruction(&pc, seq, contract, stack, mem, callContext)
-				return nil, err
+			if len(fallback) == 0 {
+				if seq, isSuper := DecomposeSuperInstruction(op); isSuper {
+					fallback = seq
+					continue
+				}
 			}
 			return nil, ErrOutOfGas
 		} else {
@@ -310,9 +319,11 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 			if contract.Gas < dynamicCost {
 				contract.Gas += operation.constantGas // restore deducted constant gas first
 				mem.lastGasCost = memLastGasCost
-				if seq, isSuper := DecomposeSuperInstruction(op); isSuper {
-					err = in.tryFallbackForSuperInstruction(&pc, seq, contract, stack, mem, callContext)
-					return nil, err
+				if len(fallback) == 0 {
+					if seq, isSuper := DecomposeSuperInstruction(op); isSuper {
+						fallback = seq
+						continue
+					}
 				}
 				return nil, ErrOutOfGas
 			} else {
@@ -340,6 +351,9 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 			break
 		}
 		pc++
+		if len(fallback) > 0 {
+			fallback = fallback[1:]
+		}
 	}
 
 	if err == errStopToken {

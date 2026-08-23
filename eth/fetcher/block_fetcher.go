@@ -34,10 +34,10 @@ import (
 
 const (
 	lightTimeout        = time.Millisecond       // Time allowance before an announced header is explicitly requested
-	arriveTimeout       = 500 * time.Millisecond // Time allowance before an announced block/transaction is explicitly requested
-	gatherSlack         = 100 * time.Millisecond // Interval used to collate almost-expired announces with fetches
+	arriveTimeout       = 200 * time.Millisecond // Time allowance before an announced block/transaction is explicitly requested
+	gatherSlack         = 50 * time.Millisecond  // Interval used to collate almost-expired announces with fetches
 	fetchTimeout        = 5 * time.Second        // Maximum allotted time to return an explicitly requested block/transaction
-	reQueueBlockTimeout = 500 * time.Millisecond // Time allowance before blocks are requeued for import
+	reQueueBlockTimeout = 200 * time.Millisecond // Time allowance before blocks are requeued for import
 
 )
 
@@ -914,7 +914,7 @@ func (f *BlockFetcher) importBlocks(op *blockOrHeaderInject) {
 	hash := block.Hash()
 
 	// Run the import on a new thread
-	log.Debug("Importing propagated block", "peer", peer, "number", block.Number(), "hash", hash, "balSize", block.BALSize())
+	log.Debug("Importing propagated block", "peer", peer, "number", block.Number(), "hash", hash)
 	go func() {
 		// If the parent's unknown, abort insertion
 		parent := f.getBlock(block.ParentHash())

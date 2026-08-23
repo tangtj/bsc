@@ -58,6 +58,7 @@ var Defaults = Config{
 	NetworkId:              0, // enable auto configuration of networkID == chainID
 	TxLookupLimit:          2350000,
 	TransactionHistory:     2350000,
+	LogHistory:             576000,
 	BlockHistory:           0,
 	StateHistory:           params.FullImmutabilityThreshold,
 	DatabaseCache:          512,
@@ -116,7 +117,6 @@ type Config struct {
 	NoPruning  bool // Whether to disable pruning and flush everything to disk
 	NoPrefetch bool // Whether to disable prefetching and only load state on demand
 
-	EnableBAL           bool
 	DirectBroadcast     bool
 	DisableSnapProtocol bool // Whether disable snap protocol
 	RangeLimit          bool
@@ -230,14 +230,14 @@ type Config struct {
 	// OverrideMendel (TODO: remove after the fork)
 	OverrideMendel *uint64 `toml:",omitempty"`
 
+	// OverridePasteur (TODO: remove after the fork)
+	OverridePasteur *uint64 `toml:",omitempty"`
+
 	// OverrideBPO1 (TODO: remove after the fork)
 	OverrideBPO1 *uint64 `toml:",omitempty"`
 
 	// OverrideBPO2 (TODO: remove after the fork)
 	OverrideBPO2 *uint64 `toml:",omitempty"`
-
-	// OverridePasteur (TODO: remove after the fork)
-	OverridePasteur *uint64 `toml:",omitempty"`
 
 	// OverrideVerkle (TODO: remove after the fork)
 	OverrideVerkle *uint64 `toml:",omitempty"`

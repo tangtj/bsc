@@ -62,9 +62,6 @@ type ChainHeaderReader interface {
 
 	// GetVerifiedBlockByHash retrieves the highest verified block.
 	GetVerifiedBlockByHash(hash common.Hash) *types.Header
-
-	// ChasingHead return the best chain head of peers.
-	ChasingHead() *types.Header
 }
 
 type VotePool interface {
@@ -135,12 +132,6 @@ type Engine interface {
 
 	// SealHash returns the hash of a block prior to it being sealed.
 	SealHash(header *types.Header) common.Hash
-
-	// SignBAL signs the BAL of the block
-	SignBAL(blockAccessList *types.BlockAccessListEncode) error
-
-	// VerifyBAL verifies the BAL of the block
-	VerifyBAL(block *types.Block, bal *types.BlockAccessListEncode) error
 
 	// CalcDifficulty is the difficulty adjustment algorithm. It returns the difficulty
 	// that a new block should have.

@@ -26,7 +26,6 @@ import (
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/tracker"
@@ -51,14 +50,13 @@ const (
 	maxQueuedTxAnns = 4096
 
 	// maxQueuedBlocks is the maximum number of block propagations to queue up before
-	// dropping broadcasts. There's not much point in queueing stale blocks, so a few
-	// that might cover uncles should be enough.
-	maxQueuedBlocks = 4
+	// dropping broadcasts. With 450ms block interval, a 1.5s slow block can cause 3-4
+	// blocks to queue up, so we need a larger buffer to avoid dropping broadcasts.
+	maxQueuedBlocks = 16
 
 	// maxQueuedBlockAnns is the maximum number of block announcements to queue up before
-	// dropping broadcasts. Similarly to block propagations, there's no point to queue
-	// above some healthy uncle limit, so use that.
-	maxQueuedBlockAnns = 4
+	// dropping broadcasts. Increased to match maxQueuedBlocks for 450ms block interval.
+	maxQueuedBlockAnns = 16
 )
 
 // Peer is a collection of relevant information we have about a `eth` peer.
@@ -319,23 +317,11 @@ func (p *Peer) AsyncSendNewBlockHash(block *types.Block) {
 func (p *Peer) SendNewBlock(block *types.Block, td *big.Int) error {
 	// Mark all the block hash as known, but ensure we don't overflow our limits
 	p.knownBlocks.Add(block.Hash())
-	bal := block.BAL()
-	if !p.CanHandleBAL.Load() {
-		bal = nil
-	}
-	if bal != nil {
-		log.Debug("SendNewBlock", "number", block.NumberU64(), "hash", block.Hash(), "peer", p.ID(),
-			"balSize", block.BALSize(), "version", bal.Version, "canHandleBAL", p.CanHandleBAL.Load())
-	} else {
-		log.Debug("SendNewBlock no BAL", "number", block.NumberU64(), "hash", block.Hash(), "peer", p.ID(),
-			"txNum", len(block.Transactions()), "canHandleBAL", p.CanHandleBAL.Load())
-	}
 
 	return p2p.Send(p.rw, NewBlockMsg, &NewBlockPacket{
 		Block:    block,
 		TD:       td,
 		Sidecars: block.Sidecars(),
-		Bal:      bal,
 	})
 }
 
